@@ -61,3 +61,4 @@ cloudshell_config.yml
 
 .idea/
 CheckPointGaiaFirewallShell2GDriver.zip
+src/test*
