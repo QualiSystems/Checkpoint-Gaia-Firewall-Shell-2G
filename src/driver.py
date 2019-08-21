@@ -8,7 +8,7 @@ from cloudshell.devices.runners.state_runner import StateRunner
 from cloudshell.devices.standards.firewall.configuration_attributes_structure import \
     create_firewall_resource_from_context as create_resource_from_context
 from cloudshell.firewall.firewall_resource_driver_interface import FirewallResourceDriverInterface
-from cloudshell.shell.core.driver_context import InitCommandContext, ResourceCommandContext, \
+from cloudshell.shell.core.driver_context import ResourceCommandContext, \
     AutoLoadCommandContext, AutoLoadDetails
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
@@ -22,8 +22,8 @@ from cloudshell.checkpoint.gaia.snmp.checkpoint_snmp_handler import CheckpointSn
 
 
 class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResourceDriverInterface,
-                                   GlobalLock):
-    SUPPORTED_OS = [r"Gaia"]
+                                          GlobalLock):
+    SUPPORTED_OS = ["Gaia", "checkpoint"]
     SHELL_NAME = "Checkpoint Gaia Firewall Shell 2G"
 
     def __init__(self):
@@ -33,7 +33,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
     def initialize(self, context):
         """Initialize the driver session
 
-        :param InitCommandContext context: the context the command runs on
+        :param context: the context the command runs on
         :rtype: str
         """
 
@@ -228,12 +228,10 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         api = get_api(context)
 
         resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        resource_config.snmp_v3_auth_protocol = "SHA"  # for now FirewallResource doesn"t support
-        resource_config.snmp_v3_priv_protocol = "AES-128"  # snmp v3 protocols
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
-        snmp_handler = SnmpHandler(resource_config, logger, api, cli_handler)
+        cli_handler = CliHandler(cli=self._cli, resource_config=resource_config, logger=logger, api=api)
+        snmp_handler = SnmpHandler(resource_config=resource_config, logger=logger, api=api, cli=cli_handler)
 
-        autoload_operations = AutoloadRunner(resource_config, logger, snmp_handler)
+        autoload_operations = AutoloadRunner(resource_config=resource_config, logger=logger, snmp_handler=snmp_handler)
         logger.info("Autoload started")
         response = autoload_operations.discover()
         logger.info("Autoload completed")
