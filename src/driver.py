@@ -23,7 +23,7 @@ from cloudshell.checkpoint.gaia.snmp.checkpoint_snmp_handler import CheckpointSn
 
 class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResourceDriverInterface,
                                           GlobalLock):
-    SUPPORTED_OS = ["Gaia", "checkpoint"]
+    SUPPORTED_OS = ["Gaia", "checkpoint", ".2620."]
     SHELL_NAME = "Checkpoint Gaia Firewall Shell 2G"
 
     def __init__(self):
