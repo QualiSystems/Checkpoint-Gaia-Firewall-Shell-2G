@@ -1,4 +1,4 @@
-cloudshell-checkpoint>=1.0,<1.1
+cloudshell-checkpoint>=1.1,<1.2
 cloudshell-shell-core>=4.0,<4.1
 cloudshell-firewall>=3.0,<3.1
 
