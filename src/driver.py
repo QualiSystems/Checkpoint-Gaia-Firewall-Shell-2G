@@ -228,8 +228,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         api = get_api(context)
 
         resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(cli=self._cli, resource_config=resource_config, logger=logger, api=api)
-        snmp_handler = SnmpHandler(resource_config=resource_config, logger=logger, api=api, cli=cli_handler)
+        snmp_handler = SnmpHandler(resource_config=resource_config, logger=logger, api=api, cli=self._cli)
 
         autoload_operations = AutoloadRunner(resource_config=resource_config, logger=logger, snmp_handler=snmp_handler)
         logger.info("Autoload started")
