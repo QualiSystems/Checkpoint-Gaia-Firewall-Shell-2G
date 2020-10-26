@@ -65,7 +65,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         configuration_type = configuration_type or "running"
         restore_method = restore_method or "override"
 
-        configuration_operations = ConfigurationRunner(logger, resource_config, api, cli_handler)
+        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
         logger.info("Restore started")
         configuration_operations.restore(path, configuration_type, restore_method)
         logger.info("Restore completed")
@@ -89,7 +89,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
 
         configuration_type = configuration_type or "running"
 
-        configuration_operations = ConfigurationRunner(logger, resource_config, api, cli_handler)
+        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
         logger.info("Save started")
         response = configuration_operations.save(folder_path, configuration_type)
         logger.info("Save completed")
