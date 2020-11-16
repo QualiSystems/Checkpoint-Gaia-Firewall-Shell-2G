@@ -1,28 +1,32 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from cloudshell.devices.driver_helper import get_logger_with_thread_id, get_api, get_cli, \
-    parse_custom_commands
-from cloudshell.devices.runners.run_command_runner import RunCommandRunner
-from cloudshell.devices.runners.state_runner import StateRunner
-from cloudshell.devices.standards.firewall.configuration_attributes_structure import \
-    create_firewall_resource_from_context as create_resource_from_context
-from cloudshell.firewall.firewall_resource_driver_interface import FirewallResourceDriverInterface
 from cloudshell.shell.core.driver_context import ResourceCommandContext, \
     AutoLoadCommandContext, AutoLoadDetails
 from cloudshell.shell.core.driver_utils import GlobalLock
-from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 
-from cloudshell.checkpoint.gaia.cli.checkpoint_cli_handler import CheckpointCliHandler as CliHandler
+from cloudshell.checkpoint.gaia.cli.checkpoint_cli_configurator import CheckpointCliHandler as CliHandler, \
+    CheckpointCliConfigurator
+from cloudshell.checkpoint.gaia.flows.checkpoint_autoload_flow import CheckpointSnmpAutoloadFlow
+from cloudshell.checkpoint.gaia.flows.checkpoint_enable_disable_snmp_flow import CheckpointEnableDisableSnmpFlow
 from cloudshell.checkpoint.gaia.runners.checkpoint_autoload_runner import CheckpointAutoloadRunner as AutoloadRunner
 from cloudshell.checkpoint.gaia.runners.checkpoint_configuration_runner import CheckpointConfigurationRunner as \
     ConfigurationRunner
 from cloudshell.checkpoint.gaia.runners.checkpoint_firmware_runner import CheckpointFirmwareRunner as FirmwareRunner
 from cloudshell.checkpoint.gaia.snmp.checkpoint_snmp_handler import CheckpointSnmpHandler as SnmpHandler
+from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
+from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
+from cloudshell.shell.core.session.logging_session import LoggingSessionContext
+
+from cloudshell.cli.service.cli import CLI
+from cloudshell.cli.service.session_pool_manager import SessionPoolManager
+from cloudshell.shell.standards.firewall.autoload_model import FirewallResourceModel
+from cloudshell.shell.standards.firewall.driver_interface import FirewallResourceDriverInterface
+from cloudshell.shell.standards.firewall.resource_config import FirewallResourceConfig
+from cloudshell.snmp.snmp_configurator import EnableDisableSnmpConfigurator
 
 
-class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResourceDriverInterface,
-                                          GlobalLock):
+class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResourceDriverInterface):
     SUPPORTED_OS = ["Gaia", "checkpoint", ".2620."]
     SHELL_NAME = "Checkpoint Gaia Firewall Shell 2G"
 
@@ -36,11 +40,9 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param context: the context the command runs on
         :rtype: str
         """
-
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-
+        resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context)
         session_pool_size = int(resource_config.sessions_concurrency_limit)
-        self._cli = get_cli(session_pool_size)
+        self._cli = CLI(SessionPoolManager(max_pool_size=session_pool_size, pool_timeout=100))
         return "Finished initializing"
 
     @GlobalLock.lock
@@ -70,7 +72,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         configuration_operations.restore(path, configuration_type, restore_method)
         logger.info("Restore completed")
 
-    def save(self, context, folder_path, configuration_type):
+    def save(self, context, folder_path, configuration_type, vrf_management_name):
         """Save a configuration file to the provided destination
 
         :param ResourceCommandContext context: The context object for the command with resource and
@@ -219,22 +221,26 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
     def get_inventory(self, context):
         """Discovers the resource structure and attributes.
 
-        :param AutoLoadCommandContext context: the context the command runs on
+        :param ResourceCommandContext context: ResourceCommandContext object with all Resource Attributes inside
         :return Attribute and sub-resource information for the Shell resource
         :rtype: AutoLoadDetails
         """
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        snmp_handler = SnmpHandler(resource_config=resource_config, logger=logger, api=api, cli=self._cli)
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
+            enable_disable_snmp_flow = CheckpointEnableDisableSnmpFlow(cli_configurator, logger)
+            snmp_configurator = EnableDisableSnmpConfigurator(enable_disable_snmp_flow, resource_config, logger)
 
-        autoload_operations = AutoloadRunner(resource_config=resource_config, logger=logger, snmp_handler=snmp_handler)
-        logger.info("Autoload started")
-        response = autoload_operations.discover()
-        logger.info("Autoload completed")
-        return response
+            resource_model = FirewallResourceModel.from_resource_config(resource_config)
+
+            autoload_operations = CheckpointSnmpAutoloadFlow(snmp_configurator, logger)
+            logger.info('Autoload started')
+            response = autoload_operations.discover(self.SUPPORTED_OS, resource_model)
+            logger.info('Autoload completed')
+            return response
 
     def health_check(self, context):
         """Checks if the device is up and connectable
