@@ -1,25 +1,22 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from cloudshell.shell.core.driver_context import ResourceCommandContext, \
-    AutoLoadCommandContext, AutoLoadDetails
+from cloudshell.shell.core.driver_context import ResourceCommandContext, AutoLoadDetails
 from cloudshell.shell.core.driver_utils import GlobalLock
 
-from cloudshell.checkpoint.gaia.cli.checkpoint_cli_configurator import CheckpointCliHandler as CliHandler, \
-    CheckpointCliConfigurator
+from cloudshell.checkpoint.gaia.cli.checkpoint_cli_configurator import CheckpointCliConfigurator
 from cloudshell.checkpoint.gaia.flows.checkpoint_autoload_flow import CheckpointSnmpAutoloadFlow
+from cloudshell.checkpoint.gaia.flows.checkpoint_configuration_flow import CheckpointConfigurationFlow
 from cloudshell.checkpoint.gaia.flows.checkpoint_enable_disable_snmp_flow import CheckpointEnableDisableSnmpFlow
-from cloudshell.checkpoint.gaia.runners.checkpoint_autoload_runner import CheckpointAutoloadRunner as AutoloadRunner
-from cloudshell.checkpoint.gaia.runners.checkpoint_configuration_runner import CheckpointConfigurationRunner as \
-    ConfigurationRunner
-from cloudshell.checkpoint.gaia.runners.checkpoint_firmware_runner import CheckpointFirmwareRunner as FirmwareRunner
-from cloudshell.checkpoint.gaia.snmp.checkpoint_snmp_handler import CheckpointSnmpHandler as SnmpHandler
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.session.logging_session import LoggingSessionContext
 
+from cloudshell.checkpoint.gaia.flows.checkpoint_load_firmware_flow import CheckpointLoadFirmwareFlow
+from cloudshell.checkpoint.gaia.flows.checkpoint_state_flow import CheckpointStateFlow
 from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
+from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
 from cloudshell.shell.standards.firewall.autoload_model import FirewallResourceModel
 from cloudshell.shell.standards.firewall.driver_interface import FirewallResourceDriverInterface
 from cloudshell.shell.standards.firewall.resource_config import FirewallResourceConfig
@@ -57,20 +54,17 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param str configuration_type: Specify whether the file should update the startup or
             running config
         """
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
 
-        configuration_type = configuration_type or "running"
-        restore_method = restore_method or "override"
-
-        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
-        logger.info("Restore started")
-        configuration_operations.restore(path, configuration_type, restore_method)
-        logger.info("Restore completed")
+            configuration_flow = CheckpointConfigurationFlow(logger, resource_config, cli_configurator)
+            configuration_type = configuration_type or "running"
+            restore_method = restore_method or "override"
+            return configuration_flow.restore(path, configuration_type, restore_method)
 
     def save(self, context, folder_path, configuration_type, vrf_management_name):
         """Save a configuration file to the provided destination
@@ -79,23 +73,21 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
             reservation info
         :param str folder_path: The path to the folder in which the configuration file will be saved
         :param str configuration_type: startup or running config
+        :param vrf_management_name:
         :return The configuration file name
         :rtype: str
         """
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        configuration_type = configuration_type or "running"
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
 
-        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
-        logger.info("Save started")
-        response = configuration_operations.save(folder_path, configuration_type)
-        logger.info("Save completed")
-        return response
+            configuration_flow = CheckpointConfigurationFlow(logger, resource_config, cli_configurator)
+            configuration_type = configuration_type or "running"
+            return configuration_flow.save(folder_path, configuration_type, vrf_management_name)
 
     @GlobalLock.lock
     def load_firmware(self, context, path):
@@ -106,16 +98,9 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param str path: path to tftp server where firmware file is stored
         """
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
-
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
-
-        logger.info("Start Load Firmware")
-        firmware_operations = FirmwareRunner(logger, cli_handler)
-        response = firmware_operations.load_firmware(path)
-        logger.info("Finish Load Firmware: {}".format(response))
+        with LoggingSessionContext(context) as logger:
+            state_flow = CheckpointLoadFirmwareFlow(logger)
+            return state_flow.load_firmware(path)
 
     def run_custom_command(self, context, custom_command):
         """Executes a custom command on the device
@@ -126,15 +111,15 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :return: the command result text
         :rtype: str
         """
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
 
-        command_operations = RunCommandRunner(logger, cli_handler)
-        return command_operations.run_custom_command(parse_custom_commands(custom_command))
+            run_command_flow = RunCommandFlow(logger, cli_configurator)
+            return run_command_flow.run_custom_command(custom_command)
 
     def run_custom_config_command(self, context, custom_command):
         """Executes a custom command on the device in configuration mode
@@ -146,14 +131,15 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :rtype: str
         """
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        command_operations = RunCommandRunner(logger, cli_handler)
-        return command_operations.run_custom_config_command(parse_custom_commands(custom_command))
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
+
+            run_command_flow = RunCommandFlow(logger, cli_configurator)
+            return run_command_flow.run_custom_config_command(custom_command)
 
     def shutdown(self, context):
         """Sends a graceful shutdown to the device
@@ -161,15 +147,15 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param ResourceCommandContext context: The context object for the command with resource and
             reservation info
         """
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
 
-        state_operations = StateRunner(logger, api, resource_config, cli_handler)
-        return state_operations.shutdown()
+            state_flow = CheckpointStateFlow(logger, resource_config, cli_configurator, api)
+            return state_flow.shutdown()
 
     def orchestration_save(self, context, mode, custom_params):
         """Saves the Shell state and returns a description of the saved artifacts and information
@@ -184,17 +170,15 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :rtype: OrchestrationSaveResult
         """
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        configuration_operations = ConfigurationRunner(logger, resource_config, api, cli_handler)
-        logger.info("Orchestration save started")
-        response = configuration_operations.orchestration_save(mode, custom_params)
-        logger.info("Orchestration save completed")
-        return response
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
+
+            configuration_flow = CheckpointConfigurationFlow(logger, resource_config, cli_configurator)
+            return configuration_flow.orchestration_save(mode, custom_params)
 
     def orchestration_restore(self, context, saved_artifact_info, custom_params):
         """Restores a saved artifact previously saved by this Shell driver using the
@@ -206,16 +190,15 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param str custom_params: Set of custom parameters for the restore operation
         """
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        configuration_operations = ConfigurationRunner(logger, resource_config, api, cli_handler)
-        logger.info("Orchestration restore started")
-        configuration_operations.orchestration_restore(saved_artifact_info, custom_params)
-        logger.info("Orchestration restore completed")
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
+
+            configuration_flow = CheckpointConfigurationFlow(logger, resource_config, cli_configurator)
+            return configuration_flow.orchestration_restore(saved_artifact_info, custom_params)
 
     @GlobalLock.lock
     def get_inventory(self, context):
@@ -236,7 +219,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
 
             resource_model = FirewallResourceModel.from_resource_config(resource_config)
 
-            autoload_operations = CheckpointSnmpAutoloadFlow(snmp_configurator, logger)
+            autoload_operations = CheckpointSnmpAutoloadFlow(logger, snmp_configurator)
             logger.info('Autoload started')
             response = autoload_operations.discover(self.SUPPORTED_OS, resource_model)
             logger.info('Autoload completed')
@@ -250,15 +233,15 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :return: Success or fail message
         :rtype: str
         """
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+            resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        resource_config = create_resource_from_context(self.SHELL_NAME, self.SUPPORTED_OS, context)
-        cli_handler = CliHandler(self._cli, resource_config, logger, api)
+            cli_configurator = CheckpointCliConfigurator(self._cli, resource_config, logger)
 
-        state_operations = StateRunner(logger, api, resource_config, cli_handler)
-        return state_operations.health_check()
+            state_flow = CheckpointStateFlow(logger, resource_config, cli_configurator, api)
+            return state_flow.health_check()
 
     def cleanup(self):
         """
