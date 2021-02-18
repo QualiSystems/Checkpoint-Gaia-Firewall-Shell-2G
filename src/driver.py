@@ -14,6 +14,7 @@ from cloudshell.shell.core.session.logging_session import LoggingSessionContext
 
 from cloudshell.checkpoint.gaia.flows.checkpoint_load_firmware_flow import CheckpointLoadFirmwareFlow
 from cloudshell.checkpoint.gaia.flows.checkpoint_state_flow import CheckpointStateFlow
+from cloudshell.checkpoint.gaia.utils import LogCommand
 from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
 from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
@@ -54,7 +55,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param str configuration_type: Specify whether the file should update the startup or
             running config
         """
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "restore"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -78,7 +79,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :rtype: str
         """
 
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "save"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -98,7 +99,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param str path: path to tftp server where firmware file is stored
         """
 
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "load firmware"):
             state_flow = CheckpointLoadFirmwareFlow(logger)
             return state_flow.load_firmware(path)
 
@@ -111,7 +112,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :return: the command result text
         :rtype: str
         """
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "run custom command"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -131,7 +132,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :rtype: str
         """
 
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "run custom config command"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -147,7 +148,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param ResourceCommandContext context: The context object for the command with resource and
             reservation info
         """
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "shutdown"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -170,7 +171,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :rtype: OrchestrationSaveResult
         """
 
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "orchestration_save"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -190,7 +191,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :param str custom_params: Set of custom parameters for the restore operation
         """
 
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "orchestration_restore"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -208,7 +209,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :return Attribute and sub-resource information for the Shell resource
         :rtype: AutoLoadDetails
         """
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "get_inventory"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
@@ -233,7 +234,7 @@ class CheckPointGaiaFirewallShell2GDriver(ResourceDriverInterface, FirewallResou
         :return: Success or fail message
         :rtype: str
         """
-        with LoggingSessionContext(context) as logger:
+        with LoggingSessionContext(context) as logger, LogCommand(logger, "health_check"):
             api = CloudShellSessionContext(context).get_api()
 
             resource_config = FirewallResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
