@@ -1,2 +1,9 @@
 pre-commit
 tox
+-e git+https://github.com/QualiSystems/cloudshell-checkpoint.git@dev#egg=cloudshell-checkpoint
+cloudshell-shell-core>=5.0,<5.1
+cloudshell-firewall>=3.0,<3.1
+cloudshell-cli>=4.0,<5
+cloudshell-snmp>=4.0,<5
+cloudshell-shell-flows>=1.0,<2
+cloudshell-shell-firewall-standard>=3.0,<3.1
