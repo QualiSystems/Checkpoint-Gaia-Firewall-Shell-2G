@@ -1,6 +1,6 @@
 import unittest
 
-from driver import CheckPointGaiaFirewallShell2GDriver
+from src.driver import CheckPointGaiaFirewallShell2GDriver
 
 
 class TestCheckPointGaiaFirewallShell2GDriver(unittest.TestCase):
