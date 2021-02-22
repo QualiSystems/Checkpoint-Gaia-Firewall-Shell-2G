@@ -37,15 +37,11 @@ For detailed information about the shell’s structure and attributes, see the [
 
 ### Requirements
 
-### Requirements
-
 Release: **Checkpoint Gaia Firewall Shell 2G**
 
-▪ CloudShell version **8.2**
+▪ CloudShell version: **9.3 and above**
 
-▪ Other
-
-[Include this note only if the shell is a 2G shell]
+▪ Python version: **3.7**
 
 **Note:** If your CloudShell version does not support this shell, you should consider upgrading to a later version of CloudShell or contact customer support. 
 
