@@ -2,7 +2,7 @@
 
 # **Checkpoint Gaia Firewall Shell 2G**  
 
-Release date: August 2019
+Release date: February 2021
 
 `Shell version: 1.0.0`
 
@@ -182,7 +182,7 @@ You can also modify existing resources, see [Managing Resources in the Inventory
   
   4. Click **Create**.
   
-  5. In the **Resource** dialog box, enter the device's settings. For details, see [Device Name Attributes](#device-name-attributes). 
+  5. In the **Resource** dialog box, enter the device's settings. For details, see [Checkpoint Gaia Firewall Shell 2G Attributes](#checkpoint-gaia-firewall-shell-2g-attributes). 
   
   6. Click **Continue**. <br><br>CloudShell validates the device’s settings and updates the new resource with the device’s structure (if the device has a structure).
 
