@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+from cloudshell.cli.service.cli import CLI
+from cloudshell.cli.service.session_pool_manager import SessionPoolManager
 from cloudshell.shell.core.driver_context import (
     AutoLoadCommandContext,
     AutoLoadDetails,
+    InitCommandContext,
     ResourceCommandContext,
 )
-
-from cloudshell.cli.service.cli import CLI
-from cloudshell.cli.service.session_pool_manager import SessionPoolManager
-from cloudshell.shell.core.driver_context import InitCommandContext
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.orchestration_save_restore import OrchestrationSaveRestore
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
@@ -22,25 +21,22 @@ from cloudshell.shell.standards.firewall.driver_interface import (
 from cloudshell.shell.standards.firewall.resource_config import FirewallResourceConfig
 from cloudshell.snmp.snmp_configurator import EnableDisableSnmpConfigurator
 
-from cloudshell.checkpoint.gaia.cli.checkpoint_cli_configurator import (
+from cloudshell.checkpoint.cli.checkpoint_cli_configurator import (
     CheckpointCliConfigurator,
 )
-
-from cloudshell.checkpoint.gaia.flows.checkpoint_configuration_flow import (
-    CheckpointConfigurationFlow,
-)
-from cloudshell.checkpoint.gaia.flows.checkpoint_autoload_flow import (
+from cloudshell.checkpoint.flows.checkpoint_autoload_flow import (
     CheckpointSnmpAutoloadFlow,
 )
-from cloudshell.checkpoint.gaia.flows.checkpoint_load_firmware_flow import (
-    CheckpointFirmwareFlow,
+from cloudshell.checkpoint.flows.checkpoint_configuration_flow import (
+    CheckpointConfigurationFlow,
 )
-from cloudshell.checkpoint.gaia.flows.checkpoint_enable_disable_snmp_flow import (
+from cloudshell.checkpoint.flows.checkpoint_enable_disable_snmp_flow import (
     CheckpointEnableDisableSnmpFlow,
 )
-from cloudshell.checkpoint.gaia.flows.checkpoint_state_flow import (
-    CheckpointStateFlow,
+from cloudshell.checkpoint.flows.checkpoint_load_firmware_flow import (
+    CheckpointFirmwareFlow,
 )
+from cloudshell.checkpoint.flows.checkpoint_state_flow import CheckpointStateFlow
 
 
 class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInterface):
@@ -70,9 +66,7 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
             )
 
             state_operations = CheckpointStateFlow(
-                resource_config,
-                cli_configurator,
-                api
+                resource_config, cli_configurator, api
             )
             return state_operations.health_check()
 
@@ -101,9 +95,7 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
             return response
 
     def run_custom_command(
-            self,
-            context: ResourceCommandContext,
-            custom_command: str
+        self, context: ResourceCommandContext, custom_command: str
     ) -> str:
         """Send custom command."""
         with LoggingSessionContext(context) as logger:
@@ -119,9 +111,7 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
             return response
 
     def run_custom_config_command(
-            self,
-            context: ResourceCommandContext,
-            custom_command: str
+        self, context: ResourceCommandContext, custom_command: str
     ) -> str:
         """Send custom command in configuration mode."""
         with LoggingSessionContext(context) as logger:
@@ -139,11 +129,11 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
             return result_str
 
     def save(
-            self,
-            context: ResourceCommandContext,
-            folder_path: str,
-            configuration_type: str,
-            vrf_management_name: str,
+        self,
+        context: ResourceCommandContext,
+        folder_path: str,
+        configuration_type: str,
+        vrf_management_name: str,
     ) -> str:
         """Save selected file to the provided destination."""
         with LoggingSessionContext(context) as logger:
@@ -213,10 +203,7 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
 
     @GlobalLock.lock
     def load_firmware(
-            self,
-            context: ResourceCommandContext,
-            path: str,
-            vrf_management_name: str
+        self, context: ResourceCommandContext, path: str, vrf_management_name: str
     ):
         """Upload and updates firmware on the resource."""
         with LoggingSessionContext(context) as logger:
@@ -232,8 +219,7 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
 
             logger.info("Start Load Firmware")
             firmware_operations = CheckpointFirmwareFlow(
-                resource_config,
-                cli_configurator
+                resource_config, cli_configurator
             )
             firmware_operations.load_firmware(
                 path=path, vrf_management_name=vrf_management_name
@@ -250,15 +236,14 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
                 resource_config, logger, self._cli
             )
 
-            state_operations = CheckpointStateFlow(resource_config, cli_configurator, api)
+            state_operations = CheckpointStateFlow(
+                resource_config, cli_configurator, api
+            )
 
             return state_operations.shutdown()
 
     def orchestration_save(
-            self,
-            context: ResourceCommandContext,
-            mode: str,
-            custom_params: str
+        self, context: ResourceCommandContext, mode: str, custom_params: str
     ) -> str:
         """Save selected file to the provided destination."""
         if not mode:
@@ -287,10 +272,10 @@ class CheckpointShellDriver(ResourceDriverInterface, FirewallResourceDriverInter
             return response_json
 
     def orchestration_restore(
-            self,
-            context: ResourceCommandContext,
-            saved_artifact_info: str,
-            custom_params: str,
+        self,
+        context: ResourceCommandContext,
+        saved_artifact_info: str,
+        custom_params: str,
     ):
         """Restore selected file to the provided destination."""
         with LoggingSessionContext(context) as logger:
