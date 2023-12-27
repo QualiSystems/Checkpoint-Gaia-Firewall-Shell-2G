@@ -1,8 +1,5 @@
-cloudshell-checkpoint>=1.0,<1.1
-cloudshell-shell-core>=5.0,<5.1
-cloudshell-firewall>=3.0,<3.1
-cloudshell-cli>=4.0,<5
-cloudshell-snmp>=4.0,<5
-cloudshell-shell-flows>=1.0,<2
-cloudshell-shell-firewall-standard>=3.0,<3.1
-
+cloudshell-shell-core~=6.0
+cloudshell-cli~=5.0
+cloudshell-snmp~=5.0
+cloudshell-checkpoint~=2.0
+cloudshell-shell-firewall-standard~=4.0
